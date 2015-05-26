@@ -41,7 +41,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Useful global constants
-define( 'WMD_VERSION',   '0.1.0'                    );
+define( 'WMD_VERSION',   '0.1.1'                    );
 define( 'WMD_URL',       plugin_dir_url( __FILE__ ) );
 define( 'WMD_PATH',      dirname( __FILE__ ) . '/'  );
 define( 'WMD_ASSETS',    WMD_URL . 'assets/'        );

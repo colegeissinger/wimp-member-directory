@@ -7,6 +7,16 @@ if ( $pmpro_msg ) {
 }
 ?>
 <p>Interested in a WIMP+ membership? Here's some amazing reasons why you <strong>NEED</strong> this.</p>
+<ul>
+	<li><b>Membership Directory </b>Build your public-facing profile and portfolio and make an impression on new clients.</li>
+	<li><b>Private Discussion Board</b> Get access to a secure discussion board where clients can’t hear you scream.</li>
+	<li><b>Coworking Access</b> 4 days a month access at <a href="http://wimpspace.com">WIMPspace</a>, WIMP’s coworking and colearning space / clubhouse in downtown Santa Rosa.</li>
+	<li><b>Discounts on Workshops</b> Discounts on select classes and workshops.</li>
+	<li><b>Vendor Discounts</b> Discounts from a list of awesome companies relevant to you and your business.</li>
+	<li><b>Swag &amp; Surprises</b> Discounts on swag and special surprise things!</li>
+	<li><b>Direct Referral Program </b>Get added to our database of hand-picked referrals and pay just 5% commission on revenue earned.</li>
+	<li><b>Support WIMP</b> Show your love and support to the community you just couldn’t live without.</li>
+</ul>
 <table id="pmpro_levels_table" class="pmpro_checkout">
 	<thead>
 	<tr>

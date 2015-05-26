@@ -44,16 +44,16 @@
 		border:1px solid #E5E5E5;
 	}
 
-	.portfolio-items {
+	.media-upload {
 		@include clearfix();
 	}
-	.portfolio-item {
+	.media-grid-item {
 		position: relative;
 		margin-bottom:10px;
 		float:left;
 		margin-right:10px;
 		margin-bottom:10px;
-		.upload-portfolio, .wmd-control, .change-portfolio {
+		.upload-portfolio, .wmd-control, .change-portfolio, .upload-logo {
 			cursor: pointer;
 		}
 		.wmd-control {
@@ -106,14 +106,8 @@
 	#submit-listing {
 		margin-top:30px;
 	}
-	#saving-listing {
-		display:none;
-		position:absolute;
-		top:33px;
-		left:109px;
-	}
 	.wmd-notification {
-		display:none;
+		display:block;
 		padding:4px;
 		margin-top:10px;
 		border:1px solid transparent;

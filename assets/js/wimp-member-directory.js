@@ -31,7 +31,7 @@ var WMD;
 			WMD.deletePortfolio();
 			WMD.changePortfolio();
 			WMD.editListing();
-			WMD.saveListing();
+			//WMD.saveListing();
 
 			// Initialize select2
 			if ( $.fn.select2 ) {
@@ -54,10 +54,10 @@ var WMD;
 		},
 
 		uploadLogo : function() {
-			$( document.getElementById( 'upload-image' ) ).click( function( e ) {
+			$( document.getElementsByClassName( 'upload-logo' ) ).click( function( e ) {
 				e.preventDefault();
 
-				WMD.media( $( e.target ) );
+				WMD.media( $( e.target ), 'upload', 'logo' );
 			});
 		},
 
@@ -65,7 +65,7 @@ var WMD;
 			$( document.getElementsByClassName( 'upload-portfolio' ) ).on( 'click', function( e ) {
 				e.preventDefault();
 
-				WMD.media( $( e.target ), 'upload' );
+				WMD.media( $( e.target ), 'upload', 'portfolio' );
 			});
 		},
 
@@ -73,7 +73,7 @@ var WMD;
 			$( document.getElementsByClassName( 'wmd-control' ) ).on( 'click', function( e ) {
 				e.preventDefault();
 
-				$( e.target ).parents( '.portfolio-item' ).remove();
+				$( e.target ).parents( '.media-grid-item' ).remove();
 			});
 		},
 
@@ -81,11 +81,11 @@ var WMD;
 			$( document.getElementsByClassName( 'change-portfolio' ) ).on( 'click', function( e ) {
 				e.preventDefault();
 
-				WMD.media( $( e.target ), 'update' );
+				WMD.media( $( e.target ), 'update', 'portfolio' );
 			});
 		},
 
-		media : function( $el, type ) {
+		media : function( $el, action, type ) {
 			// If the frame already exists, reopen it.
 			if ( typeof( wmdFrame ) !== 'undefined' ) {
 				wmdFrame.close();
@@ -102,28 +102,38 @@ var WMD;
 				multiple: false
 			});
 
-
 			// Callback for the selected image
 			wmdFrame.on( 'select', function() {
 
 				var attachment = wmdFrame.state().get( 'selection' ).first().toJSON();
 
-				if ( 'upload' === type ) {
-					_.templateSettings.variable = 'data';
+				if ( 'upload' === action ) {
+					if ( 'portfolio' === type ) {
+						var tmpl = wp.template( 'media-item' ),
+							data = {
+								url   : attachment.sizes.full.url,
+								thumb : attachment.sizes.thumbnail.url,
+								id    : attachment.id,
+								alt   : attachment.title,
+								name  : 'wmd[' + type + '][' + attachment.id + ']',
+								type  : type
+							};
 
-					var tmpl = _.template( $( document.getElementById( 'portfolio-tmpl' ) ).html() ),
-						data = {
-							url   : attachment.sizes.full.url,
-							thumb : attachment.sizes.thumbnail.url,
-							id    : attachment.id,
-							alt   : attachment.title,
-							name  : 'wmd[portfolio][' + attachment.id + ']'
-						};
+						$( document.getElementsByClassName( 'portfolio-items' ) )
+							.find( '.upload-btn' )
+							.before( tmpl( data ) );
 
-					$( document.getElementsByClassName( 'portfolio-items' ) )
-						.find( '.upload-btn' )
-						.before( tmpl( data ) );
-				} else if ( 'update' === type ) {
+						WMD.deletePortfolio();
+						WMD.changePortfolio();
+					} else if ( 'logo' === type ) {
+						$el.attr( 'src', attachment.sizes.thumbnail.url )
+							.parent()
+							.next()
+							.attr( 'value', attachment.sizes.full.url )
+							.next()
+							.attr( 'value', attachment.id );
+					}
+				} else if ( 'update' === action ) {
 					// Update the image we clicked with the new image selected
 					$el.attr( 'src' , attachment.sizes.thumbnail.url );
 
@@ -132,7 +142,7 @@ var WMD;
 					// Update the hidden form field
 					$el.parent().next().attr({
 						'value' : attachment.sizes.full.url,
-						'name' : 'wmd[portfolio][' + id + ']',
+						'name' : 'wmd[' + type + '][' + id + ']',
 						'data-id' : id
 					});
 				}

@@ -27,9 +27,9 @@ class WMD_Member_Directory {
 	 * Run our actions
 	 */
 	public function __construct() {
+		add_action( 'wp_footer', array( __CLASS__, 'js_templates' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_resources' ) );
 		add_action( 'wp_ajax_wmd_save_listing_tax', array( __CLASS__, 'save_taxonomy_ajax' ) );
-		add_action( 'wp_ajax_wmd_save_listing_post', array( __CLASS__, 'save_listing' ) );
 		add_action( 'pre_get_posts', array( __CLASS__, 'post_query' ) );
 		add_action( 'wimp_logged_in_notice', array( __CLASS__, 'wimp_plus_signup_toolbar' ) );
 
@@ -89,6 +89,18 @@ class WMD_Member_Directory {
 		);
 	}
 
+	public function js_templates() { ?>
+		<script type="text/template" id="tmpl-media-item">
+			<div class="media-grid-item">
+				<div class="wmd-media-btn change-media">
+					<span class="wmd-control dashicons dashicons-trash"></span>
+					<img src="{{{data.thumb}}}" width="150" height="150" alt="{{{data.alt}}}">
+				</div>
+				<input type="hidden" name="{{{data.name}}}" data-id="{{{data.id}}}" data-type="{{{data.type}}}" value="{{{data.url}}}" />
+			</div>
+		</script>
+	<?php }
+
 	/**
 	 * Create a new term for the Member Listings via Ajax through their profile area.
 	 *
@@ -147,35 +159,50 @@ class WMD_Member_Directory {
 	}
 
 	public static function save_listing() {
-		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'create-edit-listing' ) ) {
+		if ( ! isset( $_POST['wmd-listing-nonce'] ) || ! wp_verify_nonce( $_POST['wmd-listing-nonce'], 'create-edit-listing' ) ) {
 			self::notify( 'Could not save listing', 'Nonce check failed', json_encode( $_POST ) );
-			wp_send_json_error( 'Cannot validate request.' );
+			return array(
+				'saved' => false,
+				'message' => 'Cannot validate request.'
+			);
 		}
 
 		if ( ! wmd_is_wimp_plus_member() ) {
 			self::notify( 'Could not save listing', 'User is not a WIMP+ member', 'User ID: ' . get_current_user_id() );
-			wp_send_json_error( 'You do not have sufficient permissions to complete this request.' );
+			return array(
+				'saved' => false,
+				'message' => 'You do not have sufficient permissions to complete this request.',
+			);
 		}
 
-		if ( ! isset( $_POST['data'] ) || empty( $_POST['data'] ) ) {
+		if ( ! isset( $_POST['wmd'] ) || empty( $_POST['wmd'] ) ) {
 			self::notify( 'Could not save listing', 'No data found to process', json_encode( $_POST ) );
-			wp_send_json_error( 'No data found!' );
+			return array(
+				'saved' => false,
+				'message' => 'No data found!',
+			);
 		}
 
 		// Check the post doesn't exist already
-		if ( ! empty( $_POST['data']['id'] ) ) {
-			$post_id = (int) $_POST['data']['id'];
+		if ( ! empty( $_POST['wmd']['post-id'] ) ) {
+			$post_id = (int) $_POST['wmd']['post-id'];
 		} else {
 			$post_id = null;
 		}
 
-		$status = self::update_listing( $post_id, $_POST['data'] );
+		$status = self::update_listing( $post_id, $_POST['wmd'] );
 
 		if ( $status ) {
-			wp_send_json_success( 'Member Listing Saved!' );
+			return array(
+				'saved' => true,
+				'message' => 'Member Listing Saved!',
+			);
 		} else {
-			self::notify( 'Could not save listing', 'Update Listing returned false', json_encode( $post_id, $_POST['data'] ) );
-			wp_send_json_error( 'An error occurred! Please try again.' );
+			self::notify( 'Could not save listing', 'Update Listing returned false', json_encode( $post_id, $_POST['wmd'] ) );
+			return array(
+				'saved' => false,
+				'message' => 'An error occurred! Please try again.',
+			);
 		}
 	}
 
@@ -280,10 +307,9 @@ class WMD_Member_Directory {
 
 		// Save the logo
 		update_post_meta( $post_id, $prefix . 'company_logo', esc_url( $data['logo'] ) );
-		update_post_meta( $post_id, $prefix . 'company_logo_id', absint( $data['logo-id'] ) );
+		update_post_meta( $post_id, $prefix . 'company_logo_id', ( 0 !== absint( $data['logo-id'] ) ) ? absint( $data['logo-id'] ) : '' );
 
 		// Save the portfolio items
-		unset( $data['portfolio'][0] ); // Remove the empty portfolio item from the array.
 		update_post_meta( $post_id, $prefix . 'portfolio_items', self::sanitize_array( $data['portfolio'], 'url' ) );
 
 		// Save the url
@@ -291,17 +317,22 @@ class WMD_Member_Directory {
 
 		// Save taxonomies
 		$taxonomies = array(
-			'price-low'  => WMD_Taxonomies::PRICE_LOW,
-			'price-high' => WMD_Taxonomies::PRICE_HIGH,
+			'low_price'  => WMD_Taxonomies::PRICE_LOW,
+			'high_price' => WMD_Taxonomies::PRICE_HIGH,
 			'state'      => WMD_Taxonomies::STATE,
 			'city'       => WMD_Taxonomies::CITY,
 			'industry'   => WMD_Taxonomies::INDUSTRY,
 			'tech'       => WMD_Taxonomies::TECHNOLOGY,
-			'type'       => WMD_Taxonomies::TYPE,
+			'types'      => WMD_Taxonomies::TYPE,
 			'level'      => WMD_Taxonomies::LEVEL,
 		);
 
 		foreach ( $taxonomies as $key => $tax ) {
+			// Remove the "add new" form field form the array
+			if ( isset( $data[ $key ]['new'] ) ) {
+				unset( $data[ $key ]['new'] );
+			}
+
 			if ( 'location' === $key ) {
 				// Figure out if we need to create or update an existing state term
 				if ( ! term_exists( $data['state'], $tax ) ) {
@@ -327,10 +358,10 @@ class WMD_Member_Directory {
 			} elseif ( 'level' === $key ) {
 				// For phase 1 we will not have different levels.
 				wp_set_object_terms( $post_id, 'large', $tax );
-			} elseif ( 'price-low' === $key || 'price-high' === $key ) {
+			} elseif ( 'low_price' === $key || 'high_price' === $key ) {
 				wp_set_object_terms( $post_id, self::sanitize_array( $data[ $key ], 'price' ), $tax );
 			} elseif ( 'state' === $key || 'city' === $key ) {
-				wp_set_object_terms( $post_id, absint( $data[ $key ] ), $tax );
+				wp_set_object_terms( $post_id, absint( $data[ $key ][0] ), $tax );
 			} else {
 				wp_set_object_terms( $post_id, self::sanitize_array( $data[ $key ], 'int' ), $tax );
 			}

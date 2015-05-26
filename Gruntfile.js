@@ -126,7 +126,7 @@ module.exports = function( grunt ) {
 			}
 		},
 		clean: {
-			main: ['release/<%= pkg.version %>']
+			main: ['release/<%= pkg.version %>','release/wimp-member-directory/']
 		},
 		copy: {
 			// Copy the plugin to a versioned release directory
